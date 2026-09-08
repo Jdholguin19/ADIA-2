@@ -1,8 +1,23 @@
+import { copyFileSync } from 'node:fs'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { chatDevPlugin } from './vite-chat-plugin'
+
+// Cloudflare marca "/*  /index.html  200" en _redirects como loop infinito
+// por un bug confirmado (cloudflare/workers-sdk#11824): el validador se
+// dispara con ese nombre de archivo exacto, aunque el status 200 es un
+// rewrite, no una redirección real. Servir una copia con otro nombre lo
+// esquiva; ver public/_redirects.
+function spaFallbackCopy() {
+  return {
+    name: 'spa-fallback-copy',
+    closeBundle() {
+      copyFileSync('dist/index.html', 'dist/spa.html')
+    },
+  }
+}
 
 export default defineConfig(({ mode }) => {
   // Se cargan TODAS las variables (prefijo '') en process.env para que el
@@ -14,6 +29,7 @@ export default defineConfig(({ mode }) => {
     react(),
     chatDevPlugin(),
     tailwindcss(),
+    spaFallbackCopy(),
     VitePWA({
       // 'prompt', not 'autoUpdate': silently swapping the app out from under
       // someone who is reading a dashboard is hostile.

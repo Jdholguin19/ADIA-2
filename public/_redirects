@@ -1,4 +1,9 @@
 # SPA: cualquier ruta cae en index.html.
 # Las Pages Functions bajo /api/* tienen prioridad sobre esta regla, asi que
 # el adaptador de Cloudflare y el enrutado del cliente conviven sin chocar.
-/*    /index.html   200
+#
+# El destino es /spa.html, no /index.html: Cloudflare tiene un bug confirmado
+# (cloudflare/workers-sdk#11824) que marca "/*  /index.html  200" como loop
+# infinito y bloquea el deploy. vite.config.ts copia dist/index.html a
+# dist/spa.html en cada build para esquivar el chequeo defectuoso.
+/*    /spa.html   200

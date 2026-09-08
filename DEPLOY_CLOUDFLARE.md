@@ -92,25 +92,21 @@ cambio solo hace falta hacerlo aquí, no en ningún paso de build de Cloudflare.
    Pages** → **Create application** → pestaña **Pages** → **Connect to Git**.
 2. Autoriza el acceso a GitHub y elige el repositorio que acabas de subir.
 3. Configuración de build:
-
-   | Campo | Valor |
-   |---|---|
-   | Framework preset | `Vite` (o `None`, es equivalente) |
-   | Build command | `npm run build` |
-   | Build output directory | `dist` |
-   | Root directory | `/` (raíz del repo) |
-
+   | Campo                  | Valor                                 |
+   | ---------------------- | ------------------------------------- |
+   | Framework preset       | `Vite` (o `None`, es equivalente) |
+   | Build command          | `npm run build`                     |
+   | Build output directory | `dist`                              |
+   | Root directory         | `/` (raíz del repo)                |
 4. En **Environment variables** (todavía en esta misma pantalla de setup)
    añade las variables de build — estas son públicas, terminan en el bundle
    del navegador, así que deben tener el prefijo `VITE_`:
-
-   | Nombre | Valor |
-   |---|---|
-   | `VITE_SUPABASE_URL` | el mismo valor que tienes en `.env` |
-   | `VITE_SUPABASE_ANON_KEY` | el mismo valor que tienes en `.env` |
-   | `VITE_APP_NOMBRE` | `ADIA` (o el nombre que uses) |
-   | `NODE_VERSION` | `20` |
-
+   | Nombre                     | Valor                                |
+   | -------------------------- | ------------------------------------ |
+   | `VITE_SUPABASE_URL`      | el mismo valor que tienes en`.env` |
+   | `VITE_SUPABASE_ANON_KEY` | el mismo valor que tienes en`.env` |
+   | `VITE_APP_NOMBRE`        | `ADIA` (o el nombre que uses)      |
+   | `NODE_VERSION`           | `20`                               |
 5. Dale a **Save and Deploy**. El primer build tarda unos minutos; síguelo en
    la pestaña de logs del deployment.
 
