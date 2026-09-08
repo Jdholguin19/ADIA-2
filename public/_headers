@@ -1,0 +1,10 @@
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  # connect-src NO incluye api.openai.com a proposito: si alguien intentara
+  # llamar a OpenAI desde el navegador (lo que expondria la clave), el
+  # navegador lo bloquearia. La IA solo se alcanza por /api/chat o por la
+  # Edge Function de Supabase.
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' https://atwkpmapaxtihrqfgfth.supabase.co wss://atwkpmapaxtihrqfgfth.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'

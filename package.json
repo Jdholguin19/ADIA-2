@@ -1,0 +1,47 @@
+{
+  "name": "adia",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "migrate": "node scripts/migrate.mjs",
+    "migrate:status": "node scripts/migrate.mjs --status",
+    "db:query": "node scripts/query.mjs",
+    "seed:user": "node scripts/seed-user.mjs",
+    "typecheck": "tsc -b --noEmit",
+    "load": "node --max-old-space-size=4096 scripts/load-file.mjs",
+    "test:sandbox": "node scripts/test-sandbox.mjs",
+    "kb": "node scripts/seed-kb.mjs",
+    "test:chat": "node scripts/test-chat.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "verify": "npm run build && npm run check:secrets && npm run test:sandbox"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.10",
+    "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-virtual": "^3.11.2",
+    "papaparse": "^5.4.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "recharts": "^2.15.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/papaparse": "^5.3.15",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vite-plugin-pwa": "^0.21.1"
+  }
+}

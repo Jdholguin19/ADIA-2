@@ -1,0 +1,4 @@
+# SPA: cualquier ruta cae en index.html.
+# Las Pages Functions bajo /api/* tienen prioridad sobre esta regla, asi que
+# el adaptador de Cloudflare y el enrutado del cliente conviven sin chocar.
+/*    /index.html   200
