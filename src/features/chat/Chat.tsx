@@ -1,32 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
 import { Spinner } from '../../components/ui'
 import { n0 } from '../../lib/format'
+import { describeFilters, useFilters } from '../../lib/filters'
+import { STAGE, useChat } from './useChat'
 
-interface Turn {
-  role: 'user' | 'assistant'
-  text: string
-  sql?: string
-  rows?: any[]
-  rowCount?: number
-  truncated?: boolean
-  elapsed?: number
-  warnings?: string[]
-  cached?: boolean
-  similarity?: number
-  status?: string
-  error?: string
-}
-
-const STAGE: Record<string, string> = {
-  embedding: 'Entendiendo la pregunta…',
-  cache: 'Buscando preguntas parecidas…',
-  retrieving: 'Recuperando el contexto del dataset…',
-  planning: 'Decidiendo cómo consultarlo…',
-  sql: 'Consultando la base de datos…',
-  answering: 'Redactando la respuesta…',
-}
+// Página completa del copiloto. Ya no tiene pestaña —el acceso habitual es
+// el chat flotante— pero la ruta /d/:id/chat sigue viva para cuando hace
+// falta espacio: respuestas con tablas largas se leen mejor aquí.
+// Comparte el hook useChat con el widget: una sola implementación del
+// protocolo SSE.
 
 const SUGERENCIAS = [
   '¿Cuántos trabajadores hay en total?',
@@ -42,7 +25,8 @@ function ResultTable({ rows }: { rows: any[] }) {
   }
   const cols = [...new Set(rows.flatMap((r) => Object.keys(r ?? {})))]
   return (
-    <div className="overflow-x-auto rounded-lg mt-1.5" style={{ border: '1px solid var(--border)' }}>
+    <div className="overflow-x-auto rounded-lg mt-1.5 max-w-full"
+         style={{ border: '1px solid var(--border)' }}>
       <table className="w-full text-[11.5px] tnum">
         <thead>
           <tr style={{ background: 'var(--plane)', color: 'var(--muted)' }}>
@@ -70,70 +54,13 @@ function ResultTable({ rows }: { rows: any[] }) {
 export function Chat() {
   const { id } = useParams()
   const dsId = Number(id)
-  const [turns, setTurns] = useState<Turn[]>([])
+  const { turns, busy, ask } = useChat(dsId)
   const [q, setQ] = useState('')
-  const [busy, setBusy] = useState(false)
   const [openSql, setOpenSql] = useState<number | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const chips = describeFilters(useFilters())
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [turns])
-
-  async function ask(text: string) {
-    if (!text.trim() || busy) return
-    setBusy(true)
-    setQ('')
-    setTurns((t) => [...t, { role: 'user', text }, { role: 'assistant', text: '', status: 'embedding' }])
-    const at = turns.length + 1
-    const patch = (p: Partial<Turn>) =>
-      setTurns((t) => t.map((x, i) => (i === at ? { ...x, ...p } : x)))
-
-    try {
-      const { data: s } = await supabase.auth.getSession()
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: 'Bearer ' + (s.session?.access_token ?? ''),
-        },
-        body: JSON.stringify({ dataset_id: dsId, message: text }),
-      })
-      if (!res.ok || !res.body) {
-        const t = await res.text()
-        patch({ status: undefined, error: 'El servicio de chat respondió ' + res.status + '. ' + t.slice(0, 300) })
-        setBusy(false)
-        return
-      }
-
-      const reader = res.body.getReader()
-      const dec = new TextDecoder()
-      let buf = ''
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += dec.decode(value, { stream: true })
-        const parts = buf.split('\n\n')
-        buf = parts.pop() ?? ''
-        for (const p of parts) {
-          const line = p.replace(/^data:\s*/, '').trim()
-          if (!line) continue
-          let ev: any
-          try { ev = JSON.parse(line) } catch { continue }
-          if (ev.t === 'status') patch({ status: ev.stage })
-          else if (ev.t === 'cache' && ev.hit) patch({ cached: true, similarity: ev.similarity })
-          else if (ev.t === 'sql') patch({ sql: ev.sql, warnings: ev.warnings ?? [] })
-          else if (ev.t === 'result') {
-            patch({ rows: ev.rows, rowCount: ev.row_count, truncated: ev.truncated, elapsed: ev.elapsed_ms })
-          } else if (ev.t === 'delta') {
-            setTurns((t) => t.map((x, i) => (i === at ? { ...x, text: x.text + ev.text, status: undefined } : x)))
-          } else if (ev.t === 'error') patch({ status: undefined, error: ev.message })
-          else if (ev.t === 'done') patch({ status: undefined })
-        }
-      }
-    } catch (e: any) {
-      patch({ status: undefined, error: String(e?.message || e) })
-    }
-    setBusy(false)
-  }
 
   return (
     <div className="grid gap-3">
@@ -146,22 +73,34 @@ export function Chat() {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {SUGERENCIAS.map((s) => (
-              <button key={s} className="btn text-[11.5px] py-1" onClick={() => ask(s)}>{s}</button>
+              <button key={s} className="btn text-[11.5px] py-1"
+                      onClick={() => ask(s)}>{s}</button>
             ))}
           </div>
+        </div>
+      )}
+
+      {!!chips.length && (
+        <div className="text-[11.5px] flex gap-1.5 flex-wrap items-center"
+             style={{ color: 'var(--muted)' }}>
+          <span>Las preguntas heredan los filtros del tablero:</span>
+          {chips.map((c, i) => (
+            <span key={i} className="px-1.5 py-0.5 rounded"
+                  style={{ background: 'var(--plane)', color: 'var(--ink2)' }}>{c}</span>
+          ))}
         </div>
       )}
 
       {turns.map((t, i) =>
         t.role === 'user' ? (
           <div key={i} className="flex justify-end">
-            <div className="rounded-xl px-3.5 py-2 text-[13px] max-w-[80%]"
+            <div className="rounded-xl px-3.5 py-2 text-[13px] max-w-[80%] break-words"
                  style={{ background: 'var(--s1)', color: '#fff' }}>
               {t.text}
             </div>
           </div>
         ) : (
-          <div key={i} className="card p-4">
+          <div key={i} className="card p-4 min-w-0">
             {t.cached && (
               <div className="text-[11px] mb-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded"
                    style={{ background: 'var(--plane)', color: 'var(--muted)' }}>
@@ -170,11 +109,9 @@ export function Chat() {
               </div>
             )}
             {t.status && <Spinner label={STAGE[t.status] ?? t.status} />}
-            {t.error && (
-              <div className="text-[12.5px]" style={{ color: '#d03b3b' }}>{t.error}</div>
-            )}
+            {t.error && <div className="text-[12.5px]" style={{ color: '#d03b3b' }}>{t.error}</div>}
             {t.text && (
-              <div className="text-[13px] whitespace-pre-wrap leading-relaxed">{t.text}</div>
+              <div className="text-[13px] whitespace-pre-wrap leading-relaxed break-words">{t.text}</div>
             )}
 
             {!!t.warnings?.length && (
@@ -189,8 +126,9 @@ export function Chat() {
             )}
 
             {t.rows && (
-              <div className="mt-3">
-                <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--muted)' }}>
+              <div className="mt-3 min-w-0">
+                <div className="flex items-center gap-2 text-[11px] flex-wrap"
+                     style={{ color: 'var(--muted)' }}>
                   <span>{n0(t.rowCount)} fila(s){t.truncated ? ' (recortado)' : ''}</span>
                   {t.elapsed != null && <span>· {t.elapsed} ms</span>}
                   {t.sql && (
@@ -201,10 +139,8 @@ export function Chat() {
                   )}
                 </div>
                 {openSql === i && t.sql && (
-                  <pre className="text-[10.5px] mt-1.5 p-2 rounded-lg overflow-x-auto"
-                       style={{ background: 'var(--plane)', color: 'var(--ink2)' }}>
-                    {t.sql}
-                  </pre>
+                  <pre className="text-[10.5px] mt-1.5 p-2 rounded-lg overflow-x-auto max-w-full"
+                       style={{ background: 'var(--plane)', color: 'var(--ink2)' }}>{t.sql}</pre>
                 )}
                 <ResultTable rows={t.rows} />
               </div>
@@ -214,7 +150,8 @@ export function Chat() {
       )}
       <div ref={endRef} />
 
-      <form className="flex gap-2 sticky bottom-3" onSubmit={(e) => { e.preventDefault(); ask(q) }}>
+      <form className="flex gap-2 sticky bottom-3"
+            onSubmit={(e) => { e.preventDefault(); ask(q); setQ('') }}>
         <input className="input" value={q} onChange={(e) => setQ(e.target.value)}
                placeholder="¿Cuántos conserjes tengo?" disabled={busy} />
         <button className="btn btn-primary shrink-0" disabled={busy || !q.trim()}>

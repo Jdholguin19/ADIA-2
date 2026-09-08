@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { InfoTip } from '../../components/ui'
 
 /** Tokens de grafico leidos del CSS, para que claro/oscuro cambien en un
  *  solo sitio y los colores de serie sean los validados por la paleta. */
@@ -51,13 +52,15 @@ export function Tip({ active, payload, label, fmt }: any) {
 
 /** Numero protagonista. Para una sola cifra, una tarjeta se lee mejor que
  *  cualquier grafico. */
-export function Stat({ label, value, sub, tone }: {
-  label: string; value: ReactNode; sub?: ReactNode; tone?: 'up' | 'down' | null
+export function Stat({ label, value, sub, tone, info }: {
+  label: string; value: ReactNode; sub?: ReactNode; tone?: 'up' | 'down' | null; info?: string
 }) {
   return (
-    <div className="card p-3.5">
-      <div className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>
-        {label}
+    <div className="card p-3.5 min-w-0">
+      <div className="text-[11px] uppercase tracking-wide flex items-center gap-1.5"
+           style={{ color: 'var(--muted)' }}>
+        <span className="min-w-0">{label}</span>
+        {info && <InfoTip text={info} label={'Qué significa ' + label} />}
       </div>
       <div className="text-[21px] font-semibold tnum mt-1 leading-tight">{value}</div>
       {sub != null && (

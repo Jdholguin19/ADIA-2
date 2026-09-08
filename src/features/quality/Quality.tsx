@@ -80,7 +80,7 @@ export function Quality() {
         const isOpen = open === a.id
         const hasEv = Array.isArray(a.evidence) && a.evidence.length > 0
         return (
-          <div key={a.id} className="card p-4">
+          <div key={a.id} className="card p-4 min-w-0">
             <div className="flex items-start gap-2.5">
               <Severity level={a.severity} />
               <div className="min-w-0 flex-1">

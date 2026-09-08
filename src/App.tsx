@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom'
 import { supabase, APP_NAME } from './lib/supabase'
+import { DATASET_TABS } from './nav'
 import { Login, useSession } from './features/auth/AuthGate'
 import { Spinner } from './components/ui'
 import { DatasetList } from './features/datasets/DatasetList'
@@ -9,6 +10,7 @@ import { Quality } from './features/quality/Quality'
 import { Chat } from './features/chat/Chat'
 import { RagSettings } from './features/settings/RagSettings'
 import { DataExplorer } from './features/data/DataExplorer'
+import { ChatWidget } from './features/chat/ChatWidget'
 
 function useTheme() {
   const [theme, setTheme] = useState<string>(() => localStorage.getItem('adia-theme') || 'system')
@@ -21,15 +23,11 @@ function useTheme() {
   return { theme, setTheme }
 }
 
-const TABS = [
-  { to: '', label: 'Tablero', end: true },
-  { to: 'alertas', label: 'Alertas' },
-  { to: 'chat', label: 'Copiloto' },
-  { to: 'datos', label: 'Datos' },
-  { to: 'rag', label: 'Configuración IA' },
-]
-
-function DatasetShell({ children }: { children: React.ReactNode }) {
+// Ruta de LAYOUT de /d/:id. Al renderizarse en el contexto de la ruta padre
+// (y no dentro de cada hoja), sus NavLink relativos resuelven siempre contra
+// /d/:id. Ademas se monta una sola vez: antes se remontaba en cada pestaña y
+// volvia a pedir el nombre del dataset cada vez.
+function DatasetShell() {
   const { id } = useParams()
   const [name, setName] = useState<string>('')
   useEffect(() => {
@@ -46,7 +44,7 @@ function DatasetShell({ children }: { children: React.ReactNode }) {
         <h1 className="text-[15px] font-semibold tracking-tight">{name}</h1>
       </div>
       <nav className="flex gap-1 mb-5 flex-wrap">
-        {TABS.map((t) => (
+        {DATASET_TABS.map((t) => (
           <NavLink
             key={t.to}
             to={t.to}
@@ -65,7 +63,11 @@ function DatasetShell({ children }: { children: React.ReactNode }) {
           </NavLink>
         ))}
       </nav>
-      {children}
+      <Outlet />
+      {/* El copiloto acompana a TODAS las pestañas del dataset, no solo a
+          una: preguntar sobre lo que se esta viendo no deberia obligar a
+          cambiar de pantalla y perder los filtros. */}
+      <ChatWidget />
     </>
   )
 }
@@ -82,7 +84,7 @@ export default function App() {
   return (
     <div className="min-h-full">
       <header
-        className="sticky top-0 z-20 flex items-center gap-4 px-5 py-2.5"
+        className="sticky top-0 z-20 flex items-center gap-x-4 gap-y-2 flex-wrap px-3 sm:px-5 py-2.5"
         style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
       >
         <NavLink to="/" className="font-semibold tracking-tight text-[14px]">{APP_NAME}</NavLink>
@@ -109,14 +111,19 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto p-5">
+      <main className="max-w-[1400px] mx-auto p-3 sm:p-5">
         <Routes>
           <Route path="/" element={<DatasetList />} />
-          <Route path="/d/:id" element={<DatasetShell><Dashboard /></DatasetShell>} />
-          <Route path="/d/:id/alertas" element={<DatasetShell><Quality /></DatasetShell>} />
-          <Route path="/d/:id/chat" element={<DatasetShell><Chat /></DatasetShell>} />
-          <Route path="/d/:id/datos" element={<DatasetShell><DataExplorer /></DatasetShell>} />
-          <Route path="/d/:id/rag" element={<DatasetShell><RagSettings /></DatasetShell>} />
+          {/* Anidadas bajo una ruta de layout: es lo que hace que los enlaces
+              relativos de las pestañas resuelvan contra /d/:id y no contra la
+              pestaña activa. */}
+          <Route path="/d/:id" element={<DatasetShell />}>
+            <Route index element={<Dashboard />} />
+            <Route path="alertas" element={<Quality />} />
+            <Route path="chat" element={<Chat />} />
+            <Route path="datos" element={<DataExplorer />} />
+            <Route path="rag" element={<RagSettings />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

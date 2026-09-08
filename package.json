@@ -17,7 +17,9 @@
     "kb": "node scripts/seed-kb.mjs",
     "test:chat": "node scripts/test-chat.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
-    "verify": "npm run build && npm run check:secrets && npm run test:sandbox"
+    "verify": "npm run build && npm run check:secrets && npm run test:routes && npm run test:sandbox",
+    "test:routes": "node scripts/test-routes.mjs",
+    "map": "node scripts/map-values.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",

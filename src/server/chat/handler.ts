@@ -20,6 +20,12 @@ export interface ChatRequest {
   message: string
   client_msg_id?: string
   stream?: boolean
+  /** Lo que el usuario esta viendo en el tablero cuando pregunta. */
+  dashboard?: {
+    period?: string | null
+    filters?: Record<string, string>
+    search?: string
+  } | null
 }
 
 const CORS = {
@@ -73,6 +79,43 @@ export function extractLiterals(q: string): string[] {
 
 const sameLiterals = (a: string[], b: string[]) =>
   a.length === b.length && a.every((x, i) => x === b[i])
+
+/**
+ * Los filtros del tablero forman parte del ALCANCE de la pregunta, asi que
+ * entran en la puerta de literales igual que un mes o un umbral. Sin esto,
+ * "cuantos hay?" mirando CONSERJE y "cuantos hay?" sin filtros comparten
+ * entrada de cache y la segunda recibe la cifra de la primera.
+ */
+export function dashboardLiterals(d: ChatRequest['dashboard']): string[] {
+  if (!d) return []
+  const out: string[] = []
+  if (d.period) out.push('view_period:' + d.period)
+  for (const [k, v] of Object.entries(d.filters || {})) {
+    if (v) out.push('view_filter:' + k + '=' + v)
+  }
+  if (d.search?.trim()) out.push('view_search:' + d.search.trim().toLowerCase())
+  return out.sort()
+}
+
+/** Lo mismo, en prosa, para el prompt. */
+function dashboardContext(d: ChatRequest['dashboard']): string {
+  const parts = dashboardLiterals(d).map((l) => {
+    const i = l.indexOf(':')
+    const kind = l.slice(0, i), rest = l.slice(i + 1)
+    if (kind === 'view_period') return 'periodo = ' + rest
+    if (kind === 'view_search') return 'el nombre contiene: ' + rest
+    return rest
+  })
+  if (!parts.length) return ''
+  return [
+    '', '',
+    'VISTA ACTUAL DEL USUARIO',
+    'Ahora mismo esta mirando el tablero filtrado por: ' + parts.join(' . ') + '.',
+    'Aplica esos mismos filtros en tus consultas y DILO en la respuesta, salvo que la',
+    'pregunta pida explicitamente otro alcance (otro periodo, "en total", "en todo el',
+    'historico"...). Si la pregunta contradice un filtro, manda la pregunta.',
+  ].join(String.fromCharCode(10))
+}
 
 /* ------------------------------------------------------------------ */
 /* Supabase RPC con el JWT del usuario (la RLS le acompana)            */
@@ -254,7 +297,7 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
       const kbMin = Number(cfg.kb_min_similarity ?? 0.25)
       const temperature = Number(cfg.temperature ?? 0)
 
-      const literals = extractLiterals(body.message)
+      const literals = [...extractLiterals(body.message), ...dashboardLiterals(body.dashboard)].sort()
 
       send({ t: 'status', stage: 'embedding' })
       const emb = await embed(env, embModel, body.message)
@@ -317,7 +360,7 @@ export async function handleChat(req: Request, env: ChatEnv): Promise<Response> 
         : ''
 
       const messages: any[] = [
-        { role: 'system', content: `${cfg.system_prompt || SYSTEM_BASE}\n\n${ctx}${kbBlock}` },
+        { role: 'system', content: `${cfg.system_prompt || SYSTEM_BASE}\n\n${ctx}${dashboardContext(body.dashboard)}${kbBlock}` },
         { role: 'user', content: body.message },
       ]
 
