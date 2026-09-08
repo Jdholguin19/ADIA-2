@@ -3,18 +3,25 @@
   // auto-genera uno efimero en cada corrida (solo "assets", sin "main"), lo
   // que deja /api/chat sin manejador — cae en el binding de assets y se
   // trata como ruta de SPA. Ver src/server/chat/worker.ts.
-  // Sin esto, `wrangler deploy` BORRA las variables de texto plano puestas a
-  // mano en el dashboard (SUPABASE_URL, SUPABASE_ANON_KEY) en cada deploy,
-  // porque este archivo no declara un bloque "vars" propio — Wrangler trata
-  // el archivo como fuente de verdad y sincroniza a "sin vars". Los secrets
-  // (OPENAI_API_KEY, SUPABASE_BD_PASSWORD) no se ven afectados, solo las
-  // variables planas. https://developers.cloudflare.com/workers/wrangler/configuration/#keep_vars
-  "keep_vars": true,
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "adia",
   "compatibility_date": "2026-09-08",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server/chat/worker.ts",
+  // SUPABASE_URL/SUPABASE_ANON_KEY viven aqui, comprometidas, en vez de solo
+  // en el dashboard: `wrangler deploy` borra las variables de texto plano
+  // puestas a mano en el dashboard en cada deploy salvo que el propio
+  // binding este declarado aqui (keep_vars=true deberia evitarlo, pero en la
+  // practica con el build automatico de Cloudflare no sobrevivio ni un
+  // deploy — ver DEPLOY_CLOUDFLARE.md). No son secretas: SUPABASE_ANON_KEY
+  // ya viaja al navegador via VITE_SUPABASE_ANON_KEY, protegida solo por RLS.
+  // OPENAI_API_KEY y SUPABASE_BD_PASSWORD si son secretas y NO van aqui —
+  // esas siguen como Secret en el dashboard.
+  "keep_vars": true,
+  "vars": {
+    "SUPABASE_URL": "https://atwkpmapaxtihrqfgfth.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0d2twbWFwYXh0aWhycWZnZnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDUwMDAsImV4cCI6MjEwNDMyMTAwMH0.J2tlHsOjUUknolc2d-eVO2r1tJ6384WwFmYrV-SLoEw"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

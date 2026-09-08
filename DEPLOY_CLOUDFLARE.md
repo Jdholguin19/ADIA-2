@@ -91,39 +91,25 @@ con el mismo `handler.ts` de siempre y delega todo lo demás al binding de
 assets. Para que ese handler funcione necesita **tres** variables de entorno
 en tiempo de ejecución — no solo la clave de OpenAI:
 
-| Nombre | Tipo | Valor |
+| Nombre | Tipo | Dónde vive |
 |---|---|---|
-| `OPENAI_API_KEY` | **Secret** | tu clave `sk-...` |
-| `SUPABASE_URL` | Variable de texto | el mismo valor que `VITE_SUPABASE_URL` (sin el prefijo `VITE_`) |
-| `SUPABASE_ANON_KEY` | Variable de texto | el mismo valor que `VITE_SUPABASE_ANON_KEY` (sin el prefijo `VITE_`) |
+| `OPENAI_API_KEY` | **Secret** | dashboard → Settings → Variables and Secrets |
+| `SUPABASE_URL` | Variable de texto | **`wrangler.jsonc`** (`vars`), comprometida en el repo |
+| `SUPABASE_ANON_KEY` | Variable de texto | **`wrangler.jsonc`** (`vars`), comprometida en el repo |
 
-Las dos últimas no son secretas — son las mismas que ya viajan al navegador
-con el prefijo `VITE_` — pero el Worker no lee esas, necesita su propia copia
-sin prefijo porque `VITE_*` solo existe en tiempo de build del frontend.
-**Si solo configuras `OPENAI_API_KEY`, el chat responde 500** porque
-`handler.ts` no puede armar el cliente de Supabase.
+`SUPABASE_URL`/`SUPABASE_ANON_KEY` no son secretas — son las mismas que ya
+viajan al navegador con el prefijo `VITE_`, protegidas solo por RLS — así que
+es seguro tenerlas en texto plano dentro del repo. `OPENAI_API_KEY` sí es
+secreta y **nunca** debe ir en `wrangler.jsonc`; sigue viviendo como Secret en
+el dashboard (o por `npx wrangler secret put OPENAI_API_KEY`).
 
-Dónde ponerlas: en el proyecto `adia` (aparece como Worker en el dashboard,
-no como "Pages") → **Settings** → **Variables and Secrets** → **Add** una por
-una, marcando `OPENAI_API_KEY` como **Secret** y las otras dos como texto
-plano. Vuelve a desplegar después (**Deployments** → **Retry deployment**, o
-un nuevo push) para que el Worker las recoja.
-
-Por CLI, si prefieres no usar el dashboard:
-
-```bash
-npx wrangler secret put OPENAI_API_KEY
-npx wrangler secret put SUPABASE_URL
-npx wrangler secret put SUPABASE_ANON_KEY
-```
-
-(`wrangler secret put` sirve tanto para secretos como para variables simples;
-si quieres que `SUPABASE_URL`/`SUPABASE_ANON_KEY` queden como texto plano
-visible en el dashboard en vez de ocultas, defínelas ahí en vez de por CLI.)
+**Si solo configuras `OPENAI_API_KEY`, el chat responde con
+`"Invalid URL: undefined/rest/v1/..."`** porque `handler.ts` no puede armar
+el cliente de Supabase sin las otras dos.
 
 ---
 
-## 5. Por qué existe `wrangler.jsonc` — no lo borres
+## 5. Por qué existe `wrangler.jsonc` — no lo borres, y por qué `SUPABASE_URL`/`SUPABASE_ANON_KEY` están adentro y no solo en el dashboard
 
 Sin un `wrangler.jsonc` comprometido en el repo, Cloudflare **auto-genera uno
 efímero en cada build** que solo declara `assets` (sin `main`). Eso pasó en
@@ -145,16 +131,20 @@ de plataforma, del viejo `/*  /index.html  200` de `_redirects` — ese archivo
 ahora está vacío de reglas a propósito, ver el comentario dentro de
 [public/_redirects](public/_redirects)).
 
-**`keep_vars: true` también está ahí a propósito.** Por defecto, `wrangler
+**Historia real de por qué `SUPABASE_URL`/`SUPABASE_ANON_KEY` terminaron
+adentro del archivo en vez de solo en el dashboard:** por defecto, `wrangler
 deploy` borra cualquier variable de texto plano puesta a mano en el dashboard
-(`SUPABASE_URL`, `SUPABASE_ANON_KEY`) en **cada** deploy, porque trata el
-archivo de config como fuente de verdad y sincroniza a lo que ese archivo
-declara — nada, en nuestro caso, ya que no hay bloque `vars`. Los *secrets*
-(`OPENAI_API_KEY`, `SUPABASE_BD_PASSWORD`) no se ven afectados; solo las
-variables planas. Sin `keep_vars: true`, cada push nuevo revive el error
-`"Invalid URL: undefined/rest/v1/..."` aunque las variables sigan visibles en
-el dashboard — porque el deploy las borra y las vuelve a mostrar vacías/las
-quita silenciosamente, no porque tú hayas hecho algo mal.
+en **cada** deploy, porque trata el archivo de config como fuente de verdad.
+El flag documentado para evitarlo es `keep_vars: true` — se probó primero
+solo con ese flag (sin declarar `vars`), y en teoría debía bastar, pero en la
+práctica, con el pipeline de build automático de Cloudflare, las variables
+del dashboard no sobrevivieron ni al siguiente deploy de todas formas. En vez
+de seguir depurando por qué `keep_vars` no alcanzaba en este pipeline
+concreto, se optó por la vía más robusta: declarar los valores directamente
+en `vars` dentro de `wrangler.jsonc`, comprometidos en git — así el deploy no
+depende en absoluto de qué haya guardado el dashboard. `keep_vars: true`
+se dejó de todas formas, sin costo, por si algún día se agrega ahí una
+variable plana que sí se prefiera solo-dashboard.
 
 ---
 
