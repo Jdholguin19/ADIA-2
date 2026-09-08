@@ -1,9 +1,12 @@
-# SPA: cualquier ruta cae en index.html.
-# Las Pages Functions bajo /api/* tienen prioridad sobre esta regla, asi que
-# el adaptador de Cloudflare y el enrutado del cliente conviven sin chocar.
+# El fallback de SPA (cualquier ruta -> index.html) ya NO vive aqui.
 #
-# El destino es /spa.html, no /index.html: Cloudflare tiene un bug confirmado
-# (cloudflare/workers-sdk#11824) que marca "/*  /index.html  200" como loop
-# infinito y bloquea el deploy. vite.config.ts copia dist/index.html a
-# dist/spa.html en cada build para esquivar el chequeo defectuoso.
-/*    /spa.html   200
+# Este proyecto despliega con `wrangler deploy` (Workers + assets), no con
+# `wrangler pages deploy` (Pages clasico) — ver wrangler.jsonc. Ahi,
+# assets.not_found_handling = "single-page-application" hace lo mismo a nivel
+# de plataforma. Poner la regla tambien aqui, "/*  /index.html  200", dispara
+# un bug confirmado de Cloudflare (cloudflare/workers-sdk#11824): el
+# validador la marca como loop infinito y bloquea el deploy. No se necesita
+# de todas formas, asi que se quito en vez de parchearla.
+#
+# Si en algun momento se vuelve a Pages clasico, esta regla si hace falta:
+# /*    /index.html   200

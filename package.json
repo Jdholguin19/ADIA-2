@@ -19,7 +19,8 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "verify": "npm run build && npm run check:secrets && npm run test:routes && npm run test:sandbox",
     "test:routes": "node scripts/test-routes.mjs",
-    "map": "node scripts/map-values.mjs"
+    "map": "node scripts/map-values.mjs",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
@@ -44,6 +45,7 @@
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "wrangler": "^4.86.0"
   }
 }

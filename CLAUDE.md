@@ -105,18 +105,34 @@ declared `to authenticated, adia_sql` — keep that convention if you add tables
 
 ## Chat handler
 
-`src/server/chat/handler.ts` is platform-agnostic (pure Web APIs, no deps) with three
+`src/server/chat/handler.ts` is platform-agnostic (pure Web APIs, no deps) with four
 adapters:
 
 | Adapter | Where |
 |---|---|
 | `vite-chat-plugin.ts` | local dev, `/api/chat` (key stays in the node process) |
 | `supabase/functions/chat/index.ts` | Supabase Edge Function (Deno) |
-| `functions/api/chat.ts` | Cloudflare Pages Function |
+| `functions/api/chat.ts` | Cloudflare **Pages** Function — dead code on this project's actual deploy, kept in case it ever moves back to classic Pages |
+| `src/server/chat/worker.ts` | Cloudflare **Workers** `main` entry — this is the one that actually runs in production |
+
+**`wrangler.jsonc` (`main` + `assets`) is committed on purpose.** This project's
+Cloudflare dashboard build runs `wrangler deploy` (Workers), not `wrangler pages
+deploy` (classic Pages) — the dashboard's "Vite" framework preset defaults new
+projects to the Workers-with-assets model. Without a committed `wrangler.jsonc`,
+Cloudflare auto-generates an *assets-only* one on every build (no `main`), so
+`functions/api/chat.ts` — the Pages Functions convention — never runs: any request
+to `/api/chat` falls through to the assets binding and gets treated as an SPA
+route. `worker.ts` is the fix: it intercepts `/api/chat` before delegating
+everything else to `env.ASSETS.fetch()`. The Worker env needs `OPENAI_API_KEY`
+(secret) **and** `SUPABASE_URL` / `SUPABASE_ANON_KEY` (plain vars, same values as
+their `VITE_`-prefixed counterparts, just not embedded in the bundle) — set all
+three in the dashboard under Settings → Variables and Secrets, or a build with only
+`OPENAI_API_KEY` set will 500 on every message.
 
 **The Deno adapter imports `supabase/functions/_shared/handler.ts`, which is a copy.**
 After editing the handler, run
-`cp src/server/chat/handler.ts supabase/functions/_shared/handler.ts`.
+`cp src/server/chat/handler.ts supabase/functions/_shared/handler.ts`. `worker.ts`
+and `functions/api/chat.ts` import `handler.ts` directly, so they never drift.
 
 `openai()` self-heals: on `Unsupported value: '<param>'` it strips that param and
 retries, instead of a per-model capability table that rots (gpt-5.5 only accepts
