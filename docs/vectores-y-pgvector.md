@@ -41,15 +41,15 @@ que sea «lo público». El significado está repartido en el conjunto, y solo e
 La comprobación de que esto funciona: si medimos el parecido de todas las fichas del
 glosario contra la de «LOSEP», el orden que sale es este.
 
-| Similitud | Ficha |
-|---:|---|
-| 1,0000 | LOSEP *(consigo misma)* |
-| 0,6617 | LOEI |
-| 0,5856 | CT (Código del Trabajo) |
-| 0,5257 | Grado en el régimen docente (LOEI) |
-| 0,4810 | Sueldo medio por régimen laboral |
-| 0,4735 | Grado jerárquico |
-| 0,4450 | Régimen 4 |
+| Similitud | Ficha                               |
+| --------: | ----------------------------------- |
+|    1,0000 | LOSEP*(consigo misma)*            |
+|    0,6617 | LOEI                                |
+|    0,5856 | CT (Código del Trabajo)            |
+|    0,5257 | Grado en el régimen docente (LOEI) |
+|    0,4810 | Sueldo medio por régimen laboral   |
+|    0,4735 | Grado jerárquico                   |
+|    0,4450 | Régimen 4                          |
 
 Nadie le dijo al sistema que LOSEP, CT y LOEI son los tres regímenes laborales. Salen
 juntos porque sus descripciones ocupan zonas cercanas del espacio.
@@ -122,11 +122,11 @@ La **similitud coseno** mide el ángulo entre dos vectores:
 `pgvector` trabaja con **distancias** (menor = más parecido), no con similitudes, porque
 así `ORDER BY` ordena de mejor a peor de forma natural:
 
-| Operador | Distancia | Cuándo |
-|---|---|---|
-| `<=>` | Coseno | **La que usa ADIA.** Correcta para embeddings normalizados. |
-| `<->` | Euclídea (L2) | Cuando la magnitud del vector significa algo. |
-| `<#>` | Producto escalar negativo | Equivalente al coseno si están normalizados; algo más rápida. |
+| Operador | Distancia                 | Cuándo                                                           |
+| -------- | ------------------------- | ----------------------------------------------------------------- |
+| `<=>`  | Coseno                    | **La que usa ADIA.** Correcta para embeddings normalizados. |
+| `<->`  | Euclídea (L2)            | Cuando la magnitud del vector significa algo.                     |
+| `<#>`  | Producto escalar negativo | Equivalente al coseno si están normalizados; algo más rápida.  |
 
 La conversión entre ambas es directa:
 
@@ -276,11 +276,11 @@ create index kb_documents_emb_idx on public.kb_documents
   with (m = 16, ef_construction = 64);
 ```
 
-| Parámetro | Nuestro valor | Qué controla |
-|---|---:|---|
-| `m` | 16 | Cuántos vecinos guarda cada nodo. Más alto = grafo mejor conectado, mejor recall, índice más grande. Se fija al crear y no se puede cambiar sin reconstruir. |
-| `ef_construction` | 64 | Cuántos candidatos se consideran al insertar cada nodo. Más alto = índice de mejor calidad, más lento de construir. |
-| `ef_search` | 40 | Cuántos candidatos se exploran **al buscar**. Es el único que se ajusta por consulta. Más alto = mejor recall, más lento. |
+| Parámetro          | Nuestro valor | Qué controla                                                                                                                                                    |
+| ------------------- | ------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `m`               |            16 | Cuántos vecinos guarda cada nodo. Más alto = grafo mejor conectado, mejor recall, índice más grande. Se fija al crear y no se puede cambiar sin reconstruir. |
+| `ef_construction` |            64 | Cuántos candidatos se consideran al insertar cada nodo. Más alto = índice de mejor calidad, más lento de construir.                                          |
+| `ef_search`       |            40 | Cuántos candidatos se exploran**al buscar**. Es el único que se ajusta por consulta. Más alto = mejor recall, más lento.                               |
 
 `vector_cosine_ops` no es decoración: le dice al índice **con qué distancia** se
 construyó. Un índice creado con `vector_cosine_ops` no sirve para consultas con `<->`.
@@ -300,10 +300,10 @@ set hnsw.ef_search = 40 as $fn$ ... $fn$;
 
 Un dato real de esta instalación, que sorprende la primera vez:
 
-| Tabla | Datos | Índice HNSW |
-|---|---:|---:|
+| Tabla            | Datos |     Índice HNSW |
+| ---------------- | ----: | ---------------: |
 | `kb_documents` | 16 kB | **280 kB** |
-| `query_cache` | 16 kB | **160 kB** |
+| `query_cache`  | 16 kB | **160 kB** |
 
 El índice ocupa **17 veces** más que la tabla. Es normal: HNSW guarda el grafo de
 vecindad —hasta `m` enlaces por nodo y por capa— además de una copia de los propios
@@ -336,13 +336,13 @@ sobre nada, y a medida que se llenara, el recall se degradaría **en silencio** 
 error, sin aviso— hasta que alguien recordara reconstruir el índice. HNSW no entrena: se
 mantiene incrementalmente y funciona bien desde la primera fila.
 
-| | HNSW | IVFFlat |
-|---|---|---|
-| Necesita datos previos | No | **Sí** |
-| Recall a igual velocidad | Mejor | Peor |
-| Tamaño del índice | Grande | Pequeño |
-| Coste de inserción | Mayor | Menor |
-| Se degrada al crecer | No | Sí, hasta reconstruir |
+|                          | HNSW   | IVFFlat                |
+| ------------------------ | ------ | ---------------------- |
+| Necesita datos previos   | No     | **Sí**          |
+| Recall a igual velocidad | Mejor  | Peor                   |
+| Tamaño del índice      | Grande | Pequeño               |
+| Coste de inserción      | Mayor  | Menor                  |
+| Se degrada al crecer     | No     | Sí, hasta reconstruir |
 
 Para tablas que crecen continuamente y se escriben poco —exactamente nuestro caso— HNSW
 es la elección correcta aunque ocupe más.
@@ -384,10 +384,10 @@ Esta parte importa tanto como la anterior, porque la tentación es vectorizarlo 
 
 ### Sí usa vectores
 
-| Tabla | Filas | Con vector | Para qué |
-|---|---:|---:|---|
-| `kb_documents` | 18 | 18 | Recuperar glosario y ejemplos pregunta→SQL parecidos a la pregunta. |
-| `query_cache` | 17 | 17 | Reconocer que una pregunta ya se resolvió antes. |
+| Tabla            | Filas | Con vector | Para qué                                                            |
+| ---------------- | ----: | ---------: | -------------------------------------------------------------------- |
+| `kb_documents` |    18 |         18 | Recuperar glosario y ejemplos pregunta→SQL parecidos a la pregunta. |
+| `query_cache`  |    17 |         17 | Reconocer que una pregunta ya se resolvió antes.                    |
 
 ### No usa vectores, y es a propósito
 
@@ -452,22 +452,22 @@ activos del tablero— y solo acepta el acierto si coinciden **exactamente**.
 
 ## 14. Glosario
 
-| Término | Qué es |
-|---|---|
-| **Embedding** | Lista de números que representa un texto, construida para que el parecido de significado sea proximidad geométrica. |
-| **Dimensiones** | Cuántos números tiene el vector. Lo fija el modelo. Aquí, 1.536. |
-| **Normalizado** | Vector de longitud 1. Solo importa su dirección. Los de OpenAI lo vienen. |
-| **Distancia coseno** | Ángulo entre dos vectores. `0` = idénticos en dirección, `1` = perpendiculares. En SQL, `<=>`. |
-| **ANN** | Búsqueda aproximada del vecino más cercano. Cambia exactitud garantizada por velocidad. |
-| **Recall** | Qué fracción de los verdaderos k mejores devuelve la búsqueda aproximada. |
-| **HNSW** | Índice de grafo por capas. No necesita entrenamiento, buen recall, ocupa bastante. |
-| **IVFFlat** | Índice por regiones. Necesita datos representativos al crearse. |
-| **`m`** | Vecinos por nodo en HNSW. Se fija al crear el índice. |
-| **`ef_construction`** | Candidatos considerados al insertar. Calidad del índice. |
-| **`ef_search`** | Candidatos explorados al buscar. Ajustable por consulta. |
-| **Clase de operador** | `vector_cosine_ops` y compañía. Debe coincidir con el operador de la consulta o el índice se ignora sin avisar. |
-| **Trigrama** | Trozo de tres caracteres. Base de la búsqueda por parecido *ortográfico* (`pg_trgm`). |
-| **Post-filtrado** | El `WHERE` se aplica *después* del índice vectorial, y puede dejar menos resultados de los pedidos. |
+| Término                      | Qué es                                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Embedding**           | Lista de números que representa un texto, construida para que el parecido de significado sea proximidad geométrica. |
+| **Dimensiones**         | Cuántos números tiene el vector. Lo fija el modelo. Aquí, 1.536.                                                   |
+| **Normalizado**         | Vector de longitud 1. Solo importa su dirección. Los de OpenAI lo vienen.                                            |
+| **Distancia coseno**    | Ángulo entre dos vectores.`0` = idénticos en dirección, `1` = perpendiculares. En SQL, `<=>`.                |
+| **ANN**                 | Búsqueda aproximada del vecino más cercano. Cambia exactitud garantizada por velocidad.                             |
+| **Recall**              | Qué fracción de los verdaderos k mejores devuelve la búsqueda aproximada.                                          |
+| **HNSW**                | Índice de grafo por capas. No necesita entrenamiento, buen recall, ocupa bastante.                                   |
+| **IVFFlat**             | Índice por regiones. Necesita datos representativos al crearse.                                                      |
+| **`m`**               | Vecinos por nodo en HNSW. Se fija al crear el índice.                                                                |
+| **`ef_construction`** | Candidatos considerados al insertar. Calidad del índice.                                                             |
+| **`ef_search`**       | Candidatos explorados al buscar. Ajustable por consulta.                                                              |
+| **Clase de operador**   | `vector_cosine_ops` y compañía. Debe coincidir con el operador de la consulta o el índice se ignora sin avisar.  |
+| **Trigrama**            | Trozo de tres caracteres. Base de la búsqueda por parecido*ortográfico* (`pg_trgm`).                            |
+| **Post-filtrado**       | El`WHERE` se aplica *después* del índice vectorial, y puede dejar menos resultados de los pedidos.              |
 
 ---
 
@@ -508,4 +508,4 @@ select id from kb_documents order by embedding <=> (select embedding from kb_doc
 - `supabase/migrations/0025_ai.sql` — creación de los índices y funciones de búsqueda
 - `scripts/seed-kb.mjs` — generación de los embeddings
 - `src/server/chat/handler.ts` — `extractLiterals()` y la puerta de la caché
-- [pgvector](https://github.com/pgvector/pgvector) · [OpenAI embeddings](https://platform.openai.com/docs/guides/embeddings) · [Malkov & Yashunin, *HNSW* (2016)](https://arxiv.org/abs/1603.09320)
+- [pgvector](https://github.com/pgvector/pgvector) · [OpenAI embeddings](https://platform.openai.com/docs/guides/embeddings) · [Malkov &amp; Yashunin, *HNSW* (2016)](https://arxiv.org/abs/1603.09320)

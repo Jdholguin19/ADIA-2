@@ -145,6 +145,17 @@ de plataforma, del viejo `/*  /index.html  200` de `_redirects` — ese archivo
 ahora está vacío de reglas a propósito, ver el comentario dentro de
 [public/_redirects](public/_redirects)).
 
+**`keep_vars: true` también está ahí a propósito.** Por defecto, `wrangler
+deploy` borra cualquier variable de texto plano puesta a mano en el dashboard
+(`SUPABASE_URL`, `SUPABASE_ANON_KEY`) en **cada** deploy, porque trata el
+archivo de config como fuente de verdad y sincroniza a lo que ese archivo
+declara — nada, en nuestro caso, ya que no hay bloque `vars`. Los *secrets*
+(`OPENAI_API_KEY`, `SUPABASE_BD_PASSWORD`) no se ven afectados; solo las
+variables planas. Sin `keep_vars: true`, cada push nuevo revive el error
+`"Invalid URL: undefined/rest/v1/..."` aunque las variables sigan visibles en
+el dashboard — porque el deploy las borra y las vuelve a mostrar vacías/las
+quita silenciosamente, no porque tú hayas hecho algo mal.
+
 ---
 
 ## 6. Verificar el deploy

@@ -3,6 +3,13 @@
   // auto-genera uno efimero en cada corrida (solo "assets", sin "main"), lo
   // que deja /api/chat sin manejador — cae en el binding de assets y se
   // trata como ruta de SPA. Ver src/server/chat/worker.ts.
+  // Sin esto, `wrangler deploy` BORRA las variables de texto plano puestas a
+  // mano en el dashboard (SUPABASE_URL, SUPABASE_ANON_KEY) en cada deploy,
+  // porque este archivo no declara un bloque "vars" propio — Wrangler trata
+  // el archivo como fuente de verdad y sincroniza a "sin vars". Los secrets
+  // (OPENAI_API_KEY, SUPABASE_BD_PASSWORD) no se ven afectados, solo las
+  // variables planas. https://developers.cloudflare.com/workers/wrangler/configuration/#keep_vars
+  "keep_vars": true,
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "adia",
   "compatibility_date": "2026-09-08",
